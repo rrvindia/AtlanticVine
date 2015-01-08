@@ -1,0 +1,17 @@
+{
+  "name": "mailchimp-Integration",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "3.3.4",
+    "mailchimp-api": "2.0.7",
+    "cors": "2.5.2",
+    "path": "0.4.9",
+    "mysql": "2.5.3",
+    "forever": "0.13.0",
+    "forever-monitor": "1.5.2"
+  }
+}

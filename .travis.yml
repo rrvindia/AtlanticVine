@@ -1,0 +1,26 @@
+language: node_js
+before_install: cd ./src/
+install: ''
+deploy:
+  provider: elasticbeanstalk
+  edge: true
+  app: SW-CustomerService-Dev
+  env: SW-CustomerService-Dev
+  region: us-east-1
+  bucket_name: simplywine-customerservice-builds
+  access-key-id:
+    secure: WDsoG1vZIZ3rjIZDrtMcSMMdcMIyqpzJU9IpTvayqQiwvRHhH0DAIwZsbABITLJENXE6jyk3nEVXH5Mn0mQ1gYvPnxgJnNsYDOAQ406PLOOutrzPO2ZI6D/UG9emwMhmrA8wALxt74BPNnvDJRPGN4S4WY93psLOna4xW0jvwok=
+  secret-access-key:
+    secure: i9FtY1RZSaj53X6LZWBCZAqXRmBr31rnQRnwqsRlbkgy+RBk5rf9zm579ICVLtimDG1zEQ3umTI94M7b6mguVYskNlsJJn35iPvC7MDpVFsdfy39QK+5hRbquepqf7c/PbUdsVbkSX3c1dYUcz/4JYTulsw7CLy4VW4mFc+bLjc=
+  on:
+    branch: master
+notifications:
+  email:
+    recipients:
+    - james@stackable.io
+    - jr@simplywine.com
+    on_success: always
+    on_failure: always
+  campfire:
+    rooms:
+      secure: Ypisk/umIXvzaU1O4VPVH3TcDPFNqKNBwPk0X5PfP1fn5L+gS0LPoiXwDfcaCLwe1GT/NMJikilALRF86Lvk5fUWQYlJHcrmIJE/mI6w1OpzeDRlvoa9TJhm/v+e+ZyNt1M0eLDP1ILKsox3UtYVvV+u2+9w6mv5KdVF762rs+0=

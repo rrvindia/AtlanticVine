@@ -1,0 +1,298 @@
+-- --------------------------------------------------------------------------------
+-- Routine DDL
+-- Note: comments before and after the routine body will not be stored by the server
+-- --------------------------------------------------------------------------------
+DELIMITER //
+
+CREATE DEFINER=`node`@`%` PROCEDURE `GetCustomerToSync`(
+    IN
+    last_sync_date DATETIME
+)
+BEGIN
+
+SELECT *, (SELECT region_name from region where region_id = customer.region_id) as regionName 
+FROM `AtlanticVine`.`customer` WHERE `customer`.last_updated_date > last_sync_date and (source != 'mailchimp' or source is null);
+
+END; //
+
+-- --------------------------------------------------------------------------------
+-- Routine DDL
+-- Note: comments before and after the routine body will not be stored by the server
+-- --------------------------------------------------------------------------------
+
+DELIMITER //
+CREATE PROCEDURE `InsertMailchimpJobs`(
+    IN
+    job_type varchar(50),
+    fired_at datetime,
+    euid varchar(20),
+    list_id varchar(20),
+    email_id varchar(255),
+    email_type varchar(50),
+    ip_opt varchar(20),
+    web_id varchar(20),
+    merges_EMAIL varchar(255),
+    merges_FNAME varchar(100),
+    merges_LNAME varchar(100),
+    merges_CELLPHONE varchar(15),
+    merges_BIRTHDAY varchar(10),
+    merges_LTINSTORDT datetime,
+    merges_INSTORSPND decimal(10,0),
+    merges_DELIVSPND decimal(10,0),
+    REGION varchar(100),
+    merges_INSTORCT decimal(10,0),
+    merges_DELIVCOUNT decimal(10,0),
+    merges_LTDELIVDT datetime,
+    merges_MEMBPOINTS decimal(10,0),
+    merges_INTERESTS varchar(5000),
+    merges_group_id varchar(10),
+    merges_group_collectiion varchar(5000),
+    merges_group_name varchar(255)
+)
+BEGIN
+    INSERT INTO `mailchimpjobs`
+    (`job_type`,
+    `fired_at`,
+    `euid`,
+    `list_id`,
+    `email_id`,
+    `email_type`,
+    `ip_opt`,
+    `web_id`,
+    `merges_EMAIL`,
+    `merges_FNAME`,
+    `merges_LNAME`,
+    `merges_CELLPHONE`,
+    `merges_BIRTHDAY`,
+    `merges_LTINSTORDT`,
+    `merges_INSTORSPND`,
+    `merges_DELIVSPND`,
+    `REGION`,
+    `merges_INSTORCT`,
+    `merges_DELIVCOUNT`,
+    `merges_LTDELIVDT`,
+    `merges_MEMBPOINTS`,
+    `merges_INTERESTS`,
+    `merges_group_id`,
+    `merges_group_collectiion`,
+    `merges_group_name`
+    )
+    VALUES 
+    (
+        job_type,
+        fired_at,
+        euid,
+        list_id,
+        email_id,
+        email_type,
+        ip_opt,
+        web_id,
+        merges_EMAIL,
+        merges_FNAME,
+        merges_LNAME,
+        merges_CELLPHONE,
+        merges_BIRTHDAY,
+        merges_LTINSTORDT,
+        merges_INSTORSPND,
+        merges_DELIVSPND,
+        REGION,
+        merges_INSTORCT,
+        merges_DELIVCOUNT,
+        merges_LTDELIVDT,
+        merges_MEMBPOINTS,
+        merges_INTERESTS,
+        merges_group_id,
+        merges_group_collectiion,
+        merges_group_name
+    );
+END; //
+
+
+-- --------------------------------------------------------------------------------
+-- Routine DDL
+-- Note: comments before and after the routine body will not be stored by the server
+-- --------------------------------------------------------------------------------
+DELIMITER //
+
+CREATE PROCEDURE `SaveCustomerData`(
+        IN 
+        email VARCHAR(255), 
+        cell_phone_number VARCHAR(50), 
+        first_name Varchar(255), 
+        last_name varchar(255), 
+        region varchar(50), 
+        birth_date_MMDD varchar(10), 
+        last_sync_date DATETIME, 
+        last_instore_date DATETIME, 
+        total_instore_count int(11), 
+        total_instore_spent int(11), 
+        last_delivery_date DATE, 
+        total_delivery_count int(11), 
+        membership_points_balance int(11), 
+        total_delivery_spent int(11), 
+        mailchimp_leid int (11), 
+        mailchimp_euid varchar(20) 
+)
+BEGIN
+
+DECLARE EmailCount INTEGER;
+DECLARE LastUpdatedDate DATETIME;
+DECLARE RegionId INT(11);
+
+SELECT count(emailaddress) INTO EmailCount FROM `AtlanticVine`.`customer` WHERE emailaddress = email;
+SELECT last_updated_date INTO LastUpdatedDate FROM `AtlanticVine`.`customer` WHERE emailaddress = email;
+SELECT region_id INTO RegionId FROM `AtlanticVine`.`region` WHERE region_name = region;
+
+IF (RegionId is null) THEN
+    INSERT INTO `AtlanticVine`.`region` (region_name) VALUES (region);
+    set RegionId = LAST_INSERT_ID();
+END IF;
+
+IF (EmailCount = 0) THEN
+
+INSERT INTO `AtlanticVine`.`customer`
+(
+        `emailaddress`,
+        `cell_phone_number`,
+        `first_name`,
+        `last_name`,
+        `region_id`,
+        `birth_date_MMDD`,
+        `last_updated_date`,
+        `last_instore_date`,
+        `total_instore_count`,
+        `total_instore_spent`,
+        `last_delivery_date`,
+        `total_delivery_count`,
+        `membership_points_balance`,
+        `total_delivery_spent`,
+        `mailchimp_leid`,
+        `mailchimp_euid`)
+VALUES(
+        email, 
+        cell_phone_number, 
+        first_name, 
+        last_name, 
+        RegionId, 
+        birth_date_MMDD, 
+        last_sync_date, 
+        last_instore_date, 
+        total_instore_count, 
+        total_instore_spent, 
+        last_delivery_date, 
+        total_delivery_count, 
+        membership_points_balance, 
+        total_delivery_spent, 
+        mailchimp_leid, 
+        mailchimp_euid
+);
+ELSE IF (last_sync_date > LastUpdatedDate) THEN
+
+
+    UPDATE `AtlanticVine`.`customer`
+        SET
+
+        `cell_phone_number` = cell_phone_number,
+        `first_name` = first_name,
+        `last_name` = last_name,
+        `region_id` = RegionId,
+        `birth_date_MMDD` = birth_date_MMDD,
+        `last_updated_date` = last_sync_date,
+        `last_instore_date` = last_instore_date,
+        `total_instore_count` = total_instore_count,
+        `total_instore_spent` = total_instore_spent,
+        `last_delivery_date` = last_delivery_date,
+        `total_delivery_count` = total_delivery_count,
+       `membership_points_balance` = membership_points_balance,
+        `total_delivery_spent` = total_delivery_spent,
+        `mailchimp_leid` = mailchimp_leid,
+        `mailchimp_euid` = mailchimp_euid
+        WHERE `emailaddress` = email;
+
+    END IF;
+END IF;
+
+END;//
+
+
+-- --------------------------------------------------------------------------------
+-- Routine DDL
+-- Note: comments before and after the routine body will not be stored by the server
+-- --------------------------------------------------------------------------------
+DELIMITER //
+
+CREATE PROCEDURE `SaveOrders`(
+    IN
+    external_order_id INT(11),
+    transaction_type varchar(45),
+    location varchar(45),
+    order_time datetime,
+    date_time_due datetime,
+    customer_emailaddress varchar(100),
+    customer_phone varchar(20),
+    customer_name varchar(50),
+    external_customer_id varchar(50),
+    delivery_address varchar(1000),
+    subtotal decimal(10,0),
+    tax decimal(10,0),
+    total decimal(10,0),
+    tenders varchar(45),
+    accept_url varchar(1000),
+    cancel_url varchar(1000),
+    order_reference varchar(50),
+    line_items text,
+    simply_win_employee varchar(50),
+    delivery_time datetime,  
+    receipt_image varchar(500)
+)
+BEGIN
+    INSERT INTO `transaction`
+    (
+        `external-order-id`,
+        `transaction-type`,
+        `location`,
+        `order time`,
+        `date/time due`,
+        `customer-emailaddress`,
+        `customer-phone`,
+        `customer-name`,
+        `external-customer-id`,
+        `delivery-address`,
+        `subtotal`,
+        `tax`,
+        `total`,
+        `tenders`,
+        `accept-url`,
+        `cancel-url`,
+        `order-reference`,
+        `line items`,
+        `simply-wine-employee`,
+        `delivery-time`,
+        `receipt-image`
+    )
+    VALUES 
+    (
+        external_order_id,
+        transaction_type,
+        location,
+        order_time,
+        date_time_due,
+        customer_emailaddress,
+        customer_phone,
+        customer_name,
+        external_customer_id,
+        delivery_address,
+        subtotal,
+        tax,
+        total,
+        tenders,
+        accept_url,
+        cancel_url,
+        order_reference,
+        line_items,
+        simply_win_employee,
+        delivery_time,
+        receipt_image
+    );
+END;//
+

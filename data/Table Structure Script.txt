@@ -1,0 +1,318 @@
+delimiter $$
+
+CREATE TABLE `region` (
+  `region_id` int(11) NOT NULL AUTO_INCREMENT,
+  `region_name` varchar(50) NOT NULL,
+  `city` varchar(50) DEFAULT NULL,
+  `state` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`region_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1$$
+
+/****** ------------------- **************** -------------------- ********/
+
+delimiter $$
+
+CREATE TABLE `customer` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `emailaddress` varchar(255) NOT NULL,
+  `cell_phone_number` varchar(50) DEFAULT NULL,
+  `first_name` varchar(255) DEFAULT NULL,
+  `last_name` varchar(255) DEFAULT NULL,
+  `region_id` int(11) DEFAULT NULL,
+  `birth_date_MMDD` varchar(10) DEFAULT NULL,
+  `last_updated_date` datetime DEFAULT NULL,
+  `last_instore_date` datetime DEFAULT NULL,
+  `total_instore_count` int(11) DEFAULT NULL,
+  `total_instore_spent` int(11) DEFAULT NULL,
+  `last_delivery_date` date DEFAULT NULL,
+  `total_delivery_count` int(11) DEFAULT NULL,
+  `membership_points_balance` int(11) DEFAULT NULL,
+  `total_delivery_spent` int(11) DEFAULT NULL,
+  `mailchimp_leid` int(11) DEFAULT NULL,
+  `mailchimp_euid` varchar(20) DEFAULT NULL,
+  `source` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `cell_phone_number_UNIQUE` (`cell_phone_number`),
+  KEY `region_id` (`region_id`),
+  CONSTRAINT `cust_region_id_fk` FOREIGN KEY (`region_id`) REFERENCES `region` (`region_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1$$
+
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `customer_to_product_category` (
+  `customer_id` int(11) NOT NULL,
+  `product_category_purchased` varchar(50) NOT NULL,
+  PRIMARY KEY (`customer_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1$$
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `loyality_points_transactions` (
+  `loyality_points_transactions_id` int(11) NOT NULL,
+  `customer_id` int(11) DEFAULT NULL,
+  `transaction_date` datetime DEFAULT NULL,
+  `transaction_type` varchar(50) DEFAULT NULL,
+  `sales_channel` varchar(50) DEFAULT NULL,
+  `points_earned` int(11) DEFAULT NULL,
+  PRIMARY KEY (`loyality_points_transactions_id`),
+  KEY `customer_id` (`customer_id`),
+  CONSTRAINT `customer_id` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1$$
+
+
+/****** ------------------- **************** -------------------- ********/
+
+
+
+delimiter $$
+CREATE TABLE `mailchimpjobs` (
+  `idmailchimpjob` int(11) NOT NULL AUTO_INCREMENT,
+  `job_type` varchar(50) DEFAULT NULL,
+  `fired_at` datetime DEFAULT NULL,
+  `euid` varchar(20) DEFAULT NULL,
+  `list_id` varchar(255) DEFAULT NULL,
+  `email_id` varchar(255) DEFAULT NULL,
+  `email_type` varchar(50) DEFAULT NULL,
+  `ip_opt` varchar(20) DEFAULT NULL,
+  `web_id` varchar(20) DEFAULT NULL,
+  `merges_EMAIL` varchar(255) DEFAULT NULL,
+  `merges_FNAME` varchar(100) DEFAULT NULL,
+  `merges_LNAME` varchar(100) DEFAULT NULL,
+  `merges_CELLPHONE` varchar(15) DEFAULT NULL,
+  `merges_BIRTHDAY` varchar(10) DEFAULT NULL,
+  `merges_LTINSTORDT` datetime DEFAULT NULL,
+  `merges_INSTORSPND` decimal(10,0) DEFAULT NULL,
+  `merges_DELIVSPND` decimal(10,0) DEFAULT NULL,
+  `REGION` varchar(100) DEFAULT NULL,
+  `merges_INSTORCT` decimal(10,0) DEFAULT NULL,
+  `merges_DELIVCOUNT` decimal(10,0) DEFAULT NULL,
+  `merges_LTDELIVDT` datetime DEFAULT NULL,
+  `merges_MEMBPOINTS` decimal(10,0) DEFAULT NULL,
+  `merges_INTERESTS` varchar(5000) DEFAULT NULL,
+  `merges_group_id` varchar(10) DEFAULT NULL,
+  `merges_group_collectiion` varchar(5000) DEFAULT NULL,
+  `merges_group_name` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`idmailchimpjob`)
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=latin1$$
+
+$$
+
+delimiter $$
+
+CREATE TRIGGER `AtlanticVine`.`MailChimp_Trigger`
+AFTER INSERT ON `AtlanticVine`.`mailchimpjobs`
+FOR EACH ROW
+BEGIN
+
+DECLARE RegionId INT(11);
+/*DECLARE EmailCount INTEGER;
+SELECT count(emailaddress) INTO EmailCount FROM `AtlanticVine`.`customer` WHERE emailaddress = new.merges_EMAIL;*/
+
+SELECT region_id INTO RegionId FROM `AtlanticVine`.`region` WHERE region_name = new.REGION;
+
+IF (RegionId is null) THEN
+    INSERT INTO `AtlanticVine`.`region` (region_name) VALUES (new.REGION);
+    set RegionId = LAST_INSERT_ID();
+END IF;
+
+IF (new.job_type='subscribe') THEN /* EmailCount = 0 and */
+
+INSERT INTO `AtlanticVine`.`customer`
+(
+    `emailaddress`,
+    `cell_phone_number`,
+    `first_name`,
+    `last_name`,
+    `region_id`,
+    `birth_date_MMDD`,
+    `last_updated_date`,
+    `last_instore_date`,
+    `total_instore_count`,
+    `total_instore_spent`,
+    `last_delivery_date`,
+    `total_delivery_count`,
+    `membership_points_balance`,
+    `total_delivery_spent`,
+    `mailchimp_leid`,
+    `mailchimp_euid`,
+    `source`
+)
+VALUES
+(
+    new.merges_EMAIL,
+    new.merges_CELLPHONE,
+    new.merges_FNAME,
+    new.merges_LNAME,
+    RegionId,
+    new.merges_BIRTHDAY,
+    now(),
+    new.merges_LTINSTORDT,
+    new.merges_INSTORCT,
+    new.merges_INSTORSPND,
+    new.merges_LTDELIVDT,
+    new.merges_DELIVCOUNT,
+    new.merges_MEMBPOINTS,
+    new.merges_DELIVSPND,
+    new.web_id,
+    new.euid,
+    'mailchimp'
+);
+
+ELSE IF (new.job_type='profile') THEN
+
+    UPDATE `AtlanticVine`.`customer`
+            SET
+
+            `cell_phone_number` = new.merges_CELLPHONE,
+            `first_name` = new.merges_FNAME,
+            `last_name` = new.merges_LNAME,
+            `region_id` = RegionId,
+            `birth_date_MMDD` = new.merges_BIRTHDAY,
+            `last_updated_date` = now(),
+            `last_instore_date` = new.merges_LTINSTORDT,
+            `total_instore_count` = new.merges_INSTORCT,
+            `total_instore_spent` = new.merges_INSTORSPND,
+            `last_delivery_date` = new.merges_LTDELIVDT,
+            `total_delivery_count` = new.merges_DELIVCOUNT,
+            `membership_points_balance` = new.merges_MEMBPOINTS,
+            `total_delivery_spent` = new.merges_DELIVSPND,
+            `mailchimp_leid` = new.web_id,
+            `mailchimp_euid` = new.euid,
+            `source` = 'mailchimp'
+            
+            WHERE `emailaddress` = new.merges_EMAIL;
+    END IF;
+    
+END IF;
+
+END$$
+
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `olo_transactions` (
+  `simplycloud_transaction_id` int(11) NOT NULL,
+  `olo_customer_reference_id` int(11) DEFAULT NULL,
+  `olo_transaction_ref` int(11) DEFAULT NULL,
+  `eamil_address` varchar(50) DEFAULT NULL,
+  `first_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
+  `allow_email` tinyint(1) DEFAULT NULL,
+  `is_guest` tinyint(1) DEFAULT NULL,
+  `olo_product_cost` int(11) DEFAULT NULL,
+  `olo_product_qty` int(11) DEFAULT NULL,
+  `olo_transaction_total` int(11) DEFAULT NULL,
+  `olo_product_name` int(11) DEFAULT NULL,
+  `column_11` int(11) DEFAULT NULL,
+  PRIMARY KEY (`simplycloud_transaction_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1$$
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `product` (
+  `product_id` int(11) NOT NULL,
+  `product_name` varchar(100) NOT NULL,
+  `producer` varchar(100) DEFAULT NULL,
+  `vintage` int(11) DEFAULT NULL,
+  `description` text,
+  `country` varchar(50) DEFAULT NULL,
+  `region` int(11) DEFAULT NULL,
+  `grapes` varchar(50) DEFAULT NULL,
+  `size` varchar(50) DEFAULT NULL,
+  `producer_image_file` varchar(256) DEFAULT NULL,
+  `region_map_file` int(11) DEFAULT NULL,
+  `product_category` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1$$
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `shopkeep_transactions` (
+  `shopkeep_transaction_id` int(11) NOT NULL,
+  `sk_customer_email_address` int(11) DEFAULT NULL,
+  `sk_customer_cellphone_number` int(11) DEFAULT NULL,
+  PRIMARY KEY (`shopkeep_transaction_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1$$
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `store` (
+  `store_id` int(11) NOT NULL AUTO_INCREMENT,
+  `region_id` int(11) NOT NULL,
+  `location_name` varchar(50) DEFAULT NULL,
+  `street_address1` varchar(255) DEFAULT NULL,
+  `city` varchar(50) DEFAULT NULL,
+  `state` varchar(50) DEFAULT NULL,
+  `zip` int(11) DEFAULT NULL,
+  `phone_number` int(11) DEFAULT NULL,
+  PRIMARY KEY (`store_id`),
+  KEY `region_id` (`region_id`),
+  CONSTRAINT `store_region_id_fk` FOREIGN KEY (`region_id`) REFERENCES `region` (`region_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1$$
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `transaction` (
+  `dc-transaction-id` int(11) NOT NULL AUTO_INCREMENT,
+  `external-order-id` varchar(100) DEFAULT NULL,
+  `transaction-type` varchar(100) DEFAULT NULL,
+  `location` varchar(100) DEFAULT NULL,
+  `order time` datetime DEFAULT NULL,
+  `date/time due` datetime DEFAULT NULL,
+  `customer-emailaddress` varchar(100) DEFAULT NULL,
+  `customer-phone` varchar(50) DEFAULT NULL,
+  `customer-name` varchar(50) DEFAULT NULL,
+  `external-customer-id` varchar(50) DEFAULT NULL,
+  `delivery-address` text,
+  `subtotal` decimal(10,0) DEFAULT NULL,
+  `tax` decimal(10,0) DEFAULT NULL,
+  `total` decimal(10,0) DEFAULT NULL,
+  `tenders` varchar(100) DEFAULT NULL,
+  `accept-url` varchar(500) DEFAULT NULL,
+  `cancel-url` varchar(500) DEFAULT NULL,
+  `order-reference` varchar(50) DEFAULT NULL,
+  `line items` text,
+  `simply-wine-employee` varchar(50) DEFAULT NULL,
+  `delivery-time` datetime DEFAULT NULL,
+  `receipt-image` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`dc-transaction-id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1$$
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `van` (
+  `van_id` int(11) NOT NULL AUTO_INCREMENT,
+  `region_id` int(11) NOT NULL,
+  `van_name` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`van_id`),
+  KEY `van_region_id_fk` (`region_id`),
+  CONSTRAINT `van_region_id_fk` FOREIGN KEY (`region_id`) REFERENCES `region` (`region_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1$$
+
+
+/****** ------------------- **************** -------------------- ********/
+delimiter $$
+
+CREATE TABLE `Webhook_Data` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `data` varchar(7000) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=latin1$$
+
